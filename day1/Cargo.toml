@@ -7,6 +7,5 @@ edition = "2021"
 pedantic = "warn"
 nursery = "warn"
 unwrap_used = "warn"
-expect_used = "warn"
 
 [dependencies]
