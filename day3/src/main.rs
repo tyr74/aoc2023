@@ -19,7 +19,7 @@ impl Number {
 }
 
 fn main() {
-    let sum = get_sum(Path::new("day3.txt"));
+    let sum = get_gear_ratio(Path::new("day3.txt"));
     println!("{sum}");
 }
 
@@ -33,6 +33,15 @@ fn get_sum(p: &Path) -> u32 {
         .sum()
 }
 
+fn get_gear_ratio(p: &Path) -> u32 {
+    let arr: CharGrid = create_array(p);
+    let nums = find_nums(&arr);
+    let gears = find_gears(&arr);
+    let ratios = compare_gears(&nums, &gears);
+
+    ratios.iter().map(|x| x.0 * x.1).sum()
+}
+
 fn compare_nums(nums: &mut [Number], syms: &[(u32, u32)]) {
     for pt in syms {
         for x in nums.iter_mut() {
@@ -43,6 +52,25 @@ fn compare_nums(nums: &mut [Number], syms: &[(u32, u32)]) {
     }
 }
 
+fn compare_gears(nums: &[Number], syms: &[(u32, u32)]) -> Vec<(u32, u32)> {
+    let mut possible: Vec<&Number> = Vec::new();
+    let mut output: Vec<(u32, u32)> = Vec::new();
+
+    for pt in syms {
+        for x in nums {
+            if x.close(*pt) {
+                possible.push(x);
+            }
+        }
+        if possible.len() == 2 {
+            output.push((possible[0].value, possible[1].value));
+        }
+        possible = Vec::new();
+    }
+
+    output
+}
+
 #[allow(clippy::cast_possible_truncation)]
 fn find_syms(arr: &CharGrid) -> Vec<(u32, u32)> {
     let mut output: Vec<(u32, u32)> = Vec::new();
@@ -50,6 +78,21 @@ fn find_syms(arr: &CharGrid) -> Vec<(u32, u32)> {
     for (i, ln) in arr.iter().enumerate() {
         for (j, c) in ln.iter().enumerate() {
             if !(c.is_numeric() || *c == '.') {
+                output.push((i as u32, j as u32));
+            }
+        }
+    }
+
+    output
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn find_gears(arr: &CharGrid) -> Vec<(u32, u32)> {
+    let mut output: Vec<(u32, u32)> = Vec::new();
+
+    for (i, ln) in arr.iter().enumerate() {
+        for (j, c) in ln.iter().enumerate() {
+            if *c == '*' {
                 output.push((i as u32, j as u32));
             }
         }
@@ -199,5 +242,11 @@ mod tests {
     fn test_sum() {
         let sum = get_sum(Path::new("test.txt"));
         assert_eq!(sum, 4361);
+    }
+
+    #[test]
+    fn test_gears() {
+        let sum = get_gear_ratio(Path::new("test.txt"));
+        assert_eq!(sum, 467835);
     }
 }
