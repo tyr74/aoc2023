@@ -3,12 +3,12 @@ use std::fs;
 use std::path::Path;
 
 fn main() {
-    let sum = find_soln(Path::new("day4.txt"));
+    let sum = find_soln_extras(Path::new("day4.txt"));
 
     println!("{sum}");
 }
 
-fn find_soln(p: &Path) -> u32 {
+fn find_soln(p: &Path) -> usize {
     let file = fs::read_to_string(p).expect("File does not exist, fool");
     let cards: Vec<&str> = file
         .lines()
@@ -17,28 +17,47 @@ fn find_soln(p: &Path) -> u32 {
     cards.iter().map(|x| parse_card(x)).sum()
 }
 
-fn parse_card(s: &str) -> u32 {
-    let sides: Vec<&str> = s.split('|').map(str::trim).collect();
-    let wins: HashSet<u32> = parse_nums(sides[0]);
-    let nums: HashSet<u32> = parse_nums(sides[1]);
-    let count: u32 = get_count(&wins, &nums);
-
-    match count {
-        0 => 0,
-        _ => 2u32.pow(count - 1),
+fn find_soln_extras(p: &Path) -> usize {
+    let file = fs::read_to_string(p).expect("File does not exist, fool");
+    let num_cards = file.lines().count();
+    let mut memo: Vec<usize> = vec![1usize; num_cards];
+    let mut cards = file.lines();
+    for i in 1..=num_cards {
+        let count = parse_card(cards.next().expect("Mismatch"));
+        if count > 0 {
+            for j in 1..=count {
+                memo[i + j - 1] += memo[i - 1];
+            }
+        }
     }
+    memo.iter().sum()
+}
+
+fn parse_card(s: &str) -> usize {
+    let sides: Vec<&str> = s.split('|').map(str::trim).collect();
+    let wins: HashSet<usize> = parse_nums(sides[0]);
+    let nums: HashSet<usize> = parse_nums(sides[1]);
+    let count: usize = get_count(&wins, &nums);
+
+    count
+
+    // Used for first challenge
+    // match count {
+    //     0 => 0,
+    //     _ => 2usize.pow(count - 1),
+    // }
 }
 
 #[allow(clippy::cast_possible_truncation)]
-fn get_count(wins: &HashSet<u32>, nums: &HashSet<u32>) -> u32 {
-    wins.intersection(nums).count() as u32
+fn get_count(wins: &HashSet<usize>, nums: &HashSet<usize>) -> usize {
+    wins.intersection(nums).count() as usize
 }
 
-fn parse_nums(s: &str) -> HashSet<u32> {
-    let mut output: HashSet<u32> = HashSet::new();
+fn parse_nums(s: &str) -> HashSet<usize> {
+    let mut output: HashSet<usize> = HashSet::new();
 
     s.split(' ')
-        .filter_map(|x| x.parse::<u32>().ok())
+        .filter_map(|x| x.parse::<usize>().ok())
         .for_each(|x| {
             let _ = output.insert(x);
         });
@@ -53,7 +72,7 @@ mod tests {
     #[test]
     fn parse1() {
         let s: &str = "41 48 83 86 17";
-        let mut set: HashSet<u32> = HashSet::new();
+        let mut set: HashSet<usize> = HashSet::new();
         set.insert(41);
         set.insert(48);
         set.insert(83);
@@ -65,7 +84,7 @@ mod tests {
     #[test]
     fn parse2() {
         let s: &str = "83 86  6 31 17  9 48 53";
-        let mut set: HashSet<u32> = HashSet::new();
+        let mut set: HashSet<usize> = HashSet::new();
         set.insert(83);
         set.insert(86);
         set.insert(6);
@@ -90,7 +109,7 @@ mod tests {
 
     #[test]
     fn card1() {
-        assert_eq!(parse_card("41 48 83 86 17 | 83 86  6 31 17  9 48 53"), 8);
+        assert_eq!(parse_card("41 48 83 86 17 | 83 86  6 31 17  9 48 53"), 4);
     }
 
     #[test]
@@ -120,6 +139,6 @@ mod tests {
 
     #[test]
     fn test_soln() {
-        assert_eq!(find_soln(Path::new("test.txt")), 13);
+        assert_eq!(find_soln_extras(Path::new("test.txt")), 30);
     }
 }
