@@ -1,0 +1,1 @@
+std::iter::Map<std::collections::hash_map::Keys<'_, std::string::String, usize>, for<'a> fn(&'a str) -> std::result::Result<Hand, <Hand as std::str::FromStr>::Err> {<Hand as std::str::FromStr>::from_str}>
