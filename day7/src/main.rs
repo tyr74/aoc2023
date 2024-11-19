@@ -67,25 +67,75 @@ enum HandType {
 
 impl HandType {
     fn get_type(counts: &HashMap<char, u8>) -> Self {
-        match *counts.values().max().expect("Hand empty") {
-            5 => Self::Five,
-            4 => Self::Four,
-            3 => {
-                if *counts.values().min().expect("Hand empty") == 2 {
-                    Self::Full
-                } else {
-                    Self::Three
+        let max = *counts.values().max().expect("Hand empty");
+        let min = *counts.values().min().expect("Hand empty");
+        if let Some(&a) = counts.get(&'J') {
+            match a {
+                5 | 4 => Self::Five,
+                3 => {
+                    if min == 2 {
+                        Self::Five
+                    } else {
+                        Self::Four
+                    }
                 }
-            }
-            2 => {
-                if counts.values().fold(0u8, |acc, x| acc + (*x / 2)) == 2 {
-                    Self::TwoPair
-                } else {
-                    Self::OnePair
+                2 | 1 => {
+                    let no_joker: HashMap<char, u8> = counts
+                        .clone()
+                        .into_iter()
+                        .filter(|(x, _)| *x != 'J')
+                        .collect();
+                    let rem_max = *no_joker
+                        .values()
+                        .max()
+                        .expect("Jokers were all of them, somehow");
+                    let rem_min = *no_joker
+                        .values()
+                        .min()
+                        .expect("Jokers were all of them, somehow");
+                    if a == 2 {
+                        if max == 3 {
+                            Self::Five
+                        } else if rem_max == 2 {
+                            Self::Four
+                        } else {
+                            Self::Three
+                        }
+                    } else if rem_max == 4 {
+                        Self::Five
+                    } else if rem_max == 3 {
+                        Self::Four
+                    } else if rem_min == 2 {
+                        Self::Full
+                    } else if rem_max == 2 {
+                        Self::Three
+                    } else {
+                        Self::OnePair
+                    }
                 }
+                _ => panic!("How many cards you got in your hand lil bro"),
             }
-            1 => Self::High,
-            _ => panic!("How many cards you got in your hand lil bro"),
+        } else {
+            match max {
+                5 => Self::Five,
+                4 => Self::Four,
+                3 => {
+                    if min == 2 {
+                        Self::Full
+                    } else {
+                        Self::Three
+                    }
+                }
+                2 => {
+                    if counts.values().fold(0u8, |acc, x| acc + (*x / 2)) == 2 {
+                        Self::TwoPair
+                    } else {
+                        Self::OnePair
+                    }
+                }
+                1 => Self::High,
+                _ => panic!("How many cards you got in your hand lil bro"),
+            }
         }
     }
 }
@@ -144,7 +194,7 @@ fn card_to_int(c: char) -> u8 {
         'A' => 14,
         'K' => 13,
         'Q' => 12,
-        'J' => 11,
+        'J' => 1,
         'T' => 10,
         n @ '2'..='9' => n.to_digit(10).expect("Char wasn't numeric apparently") as u8,
         _ => panic!("How did we get here"),
@@ -155,6 +205,69 @@ fn card_to_int(c: char) -> u8 {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn joker_hand1() {
+        assert_eq!(Hand::from_str("JJJJJ").unwrap().hand_type, HandType::Five);
+    }
+
+    #[test]
+    fn joker_hand2() {
+        assert_eq!(Hand::from_str("JJJJA").unwrap().hand_type, HandType::Five);
+    }
+
+    #[test]
+    fn joker_hand3() {
+        assert_eq!(Hand::from_str("JJJAA").unwrap().hand_type, HandType::Five);
+    }
+
+    #[test]
+    fn joker_hand4() {
+        assert_eq!(Hand::from_str("JJJA2").unwrap().hand_type, HandType::Four);
+    }
+
+    #[test]
+    fn joker_hand5() {
+        assert_eq!(Hand::from_str("JJAAA").unwrap().hand_type, HandType::Five);
+    }
+
+    #[test]
+    fn joker_hand6() {
+        assert_eq!(Hand::from_str("JJAA2").unwrap().hand_type, HandType::Four);
+    }
+
+    #[test]
+    fn joker_hand7() {
+        assert_eq!(Hand::from_str("JJA23").unwrap().hand_type, HandType::Three);
+    }
+
+    #[test]
+    fn joker_hand8() {
+        assert_eq!(Hand::from_str("JAAAA").unwrap().hand_type, HandType::Five);
+    }
+
+    #[test]
+    fn joker_hand9() {
+        assert_eq!(Hand::from_str("JAAA2").unwrap().hand_type, HandType::Four);
+    }
+
+    #[test]
+    fn joker_hand10() {
+        assert_eq!(Hand::from_str("JAA22").unwrap().hand_type, HandType::Full);
+    }
+
+    #[test]
+    fn joker_hand11() {
+        assert_eq!(Hand::from_str("JAA23").unwrap().hand_type, HandType::Three);
+    }
+
+    #[test]
+    fn joker_hand12() {
+        assert_eq!(
+            Hand::from_str("JA234").unwrap().hand_type,
+            HandType::OnePair
+        );
+    }
 
     #[test]
     fn hand_type1() {
@@ -168,7 +281,9 @@ mod tests {
 
     #[test]
     fn hand_type3() {
-        assert_eq!(Hand::from_str("AAA22").unwrap().hand_type, HandType::Full);
+        let hand = Hand::from_str("AAA22").unwrap();
+        println!("{:?}", hand.counts);
+        assert_eq!(hand.hand_type, HandType::Full);
     }
 
     #[test]
@@ -273,10 +388,10 @@ mod tests {
         ];
         let ans = vec![
             Hand::from_str("32T3K").unwrap(),
-            Hand::from_str("KTJJT").unwrap(),
             Hand::from_str("KK677").unwrap(),
             Hand::from_str("T55J5").unwrap(),
             Hand::from_str("QQQJA").unwrap(),
+            Hand::from_str("KTJJT").unwrap(),
         ];
         cards.sort_unstable();
         assert_eq!(cards, ans);
@@ -287,6 +402,6 @@ mod tests {
         let map = parse_ln(Path::new("test.txt"));
         let total = process_cards(&map);
 
-        assert_eq!(total, 6440);
+        assert_eq!(total, 5905);
     }
 }
