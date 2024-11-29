@@ -29,28 +29,41 @@ fn main() {
     let grid = create_array(Path::new("day10.txt"));
     let far = search(&grid);
 
-    println!("Farthest: {far}");
+    println!("Area: {far}");
 }
 
+#[allow(clippy::cast_possible_wrap)]
 fn search(grid: &[Vec<char>]) -> usize {
     let mut visited: Vec<Loc> = Vec::new();
     let mut next: VecDeque<Loc> = VecDeque::new();
+    let mut count: usize = 1;
+    let mut area: isize = 0;
 
-    next.extend(get_start(grid));
+    next.push_front(get_start(grid, &mut area));
 
     while let Some(cur) = next.pop_front() {
         if visited.contains(&cur) {
             continue;
         }
-        next.push_back(get_next(&cur, grid));
+        match cur.next {
+            Dir::North => area += cur.j as isize,
+            Dir::South => area -= cur.j as isize,
+            Dir::All => break,
+            _ => (),
+        }
+        next.push_front(get_next(&cur, grid));
         visited.push(cur);
+        count += 1;
     }
 
-    visited
-        .iter()
-        .max_by(|&x, &y| x.dist.cmp(&y.dist))
-        .expect("Loop does not exist")
-        .dist
+    area.unsigned_abs() - (count / 2) + 1
+
+    // Original solution result
+    // visited
+    //     .iter()
+    //     .max_by(|&x, &y| x.dist.cmp(&y.dist))
+    //     .expect("Loop does not exist")
+    //     .dist
 }
 
 #[allow(clippy::match_on_vec_items, clippy::too_many_lines)]
@@ -75,6 +88,12 @@ fn get_next(loc: &Loc, grid: &[Vec<char>]) -> Loc {
                 dist: loc.dist + 1,
                 next: Dir::North,
             },
+            'S' => Loc {
+                i: loc.i - 1,
+                j: loc.j,
+                dist: loc.dist + 1,
+                next: Dir::All,
+            },
             _ => panic!("Tunnel dead ends"),
         },
         Dir::East => match grid[loc.i][loc.j + 1] {
@@ -95,6 +114,12 @@ fn get_next(loc: &Loc, grid: &[Vec<char>]) -> Loc {
                 j: loc.j + 1,
                 dist: loc.dist + 1,
                 next: Dir::East,
+            },
+            'S' => Loc {
+                i: loc.i,
+                j: loc.j + 1,
+                dist: loc.dist + 1,
+                next: Dir::All,
             },
             _ => panic!("Tunnel dead ends"),
         },
@@ -117,6 +142,12 @@ fn get_next(loc: &Loc, grid: &[Vec<char>]) -> Loc {
                 dist: loc.dist + 1,
                 next: Dir::South,
             },
+            'S' => Loc {
+                i: loc.i + 1,
+                j: loc.j,
+                dist: loc.dist + 1,
+                next: Dir::All,
+            },
             _ => panic!("Tunnel dead ends"),
         },
         Dir::West => match grid[loc.i][loc.j - 1] {
@@ -138,15 +169,25 @@ fn get_next(loc: &Loc, grid: &[Vec<char>]) -> Loc {
                 dist: loc.dist + 1,
                 next: Dir::West,
             },
+            'S' => Loc {
+                i: loc.i,
+                j: loc.j - 1,
+                dist: loc.dist + 1,
+                next: Dir::All,
+            },
             _ => panic!("Tunnel dead ends"),
         },
         Dir::All => panic!("Dir::All shouldn't be passed to this function"),
     }
 }
 
-#[allow(clippy::match_on_vec_items, clippy::too_many_lines)]
-fn get_start(grid: &[Vec<char>]) -> Vec<Loc> {
-    let mut output: Vec<Loc> = Vec::new();
+#[allow(
+    clippy::match_on_vec_items,
+    clippy::too_many_lines,
+    clippy::cast_possible_wrap
+)]
+fn get_start(grid: &[Vec<char>], area: &mut isize) -> Loc {
+    // let mut output: Vec<Loc> = Vec::new();
     let mut start: Loc = Loc {
         i: 0,
         j: 0,
@@ -171,99 +212,125 @@ fn get_start(grid: &[Vec<char>]) -> Vec<Loc> {
     assert!(start.dist != 1, "S character was not found.");
 
     if let Some(row) = grid.get(start.i.wrapping_sub(1)) {
+        *area += start.j as isize;
         match row[start.j] {
-            'F' => output.push(Loc {
-                i: start.i - 1,
-                j: start.j,
-                dist: 1,
-                next: Dir::East,
-            }),
-            '7' => output.push(Loc {
-                i: start.i - 1,
-                j: start.j,
-                dist: 1,
-                next: Dir::West,
-            }),
-            '|' => output.push(Loc {
-                i: start.i - 1,
-                j: start.j,
-                dist: 1,
-                next: Dir::North,
-            }),
-            _ => (),
-        }
+            'F' => {
+                return Loc {
+                    i: start.i - 1,
+                    j: start.j,
+                    dist: 1,
+                    next: Dir::East,
+                }
+            }
+            '7' => {
+                return Loc {
+                    i: start.i - 1,
+                    j: start.j,
+                    dist: 1,
+                    next: Dir::West,
+                }
+            }
+            '|' => {
+                return Loc {
+                    i: start.i - 1,
+                    j: start.j,
+                    dist: 1,
+                    next: Dir::North,
+                }
+            }
+            _ => *area -= start.j as isize,
+        };
     }
     if let Some(row) = grid.get(start.i + 1) {
+        *area -= start.j as isize;
         match row[start.j] {
-            'J' => output.push(Loc {
-                i: start.i + 1,
-                j: start.j,
-                dist: 1,
-                next: Dir::West,
-            }),
-            'L' => output.push(Loc {
-                i: start.i + 1,
-                j: start.j,
-                dist: 1,
-                next: Dir::East,
-            }),
-            '|' => output.push(Loc {
-                i: start.i + 1,
-                j: start.j,
-                dist: 1,
-                next: Dir::South,
-            }),
-            _ => (),
+            'J' => {
+                return Loc {
+                    i: start.i + 1,
+                    j: start.j,
+                    dist: 1,
+                    next: Dir::West,
+                }
+            }
+            'L' => {
+                return Loc {
+                    i: start.i + 1,
+                    j: start.j,
+                    dist: 1,
+                    next: Dir::East,
+                }
+            }
+            '|' => {
+                return Loc {
+                    i: start.i + 1,
+                    j: start.j,
+                    dist: 1,
+                    next: Dir::South,
+                }
+            }
+            _ => *area += start.j as isize,
         }
     }
     if let Some(c) = grid[start.i].get(start.j.wrapping_sub(1)) {
         match c {
-            'L' => output.push(Loc {
-                i: start.i,
-                j: start.j - 1,
-                dist: 1,
-                next: Dir::North,
-            }),
-            'F' => output.push(Loc {
-                i: start.i,
-                j: start.j - 1,
-                dist: 1,
-                next: Dir::South,
-            }),
-            '-' => output.push(Loc {
-                i: start.i,
-                j: start.j - 1,
-                dist: 1,
-                next: Dir::West,
-            }),
+            'L' => {
+                return Loc {
+                    i: start.i,
+                    j: start.j - 1,
+                    dist: 1,
+                    next: Dir::North,
+                }
+            }
+            'F' => {
+                return Loc {
+                    i: start.i,
+                    j: start.j - 1,
+                    dist: 1,
+                    next: Dir::South,
+                }
+            }
+            '-' => {
+                return Loc {
+                    i: start.i,
+                    j: start.j - 1,
+                    dist: 1,
+                    next: Dir::West,
+                }
+            }
             _ => (),
         }
     }
     if let Some(c) = grid[start.i].get(start.j + 1) {
         match c {
-            'J' => output.push(Loc {
-                i: start.i,
-                j: start.j + 1,
-                dist: 1,
-                next: Dir::North,
-            }),
-            '7' => output.push(Loc {
-                i: start.i,
-                j: start.j + 1,
-                dist: 1,
-                next: Dir::South,
-            }),
-            '-' => output.push(Loc {
-                i: start.i,
-                j: start.j + 1,
-                dist: 1,
-                next: Dir::East,
-            }),
+            'J' => {
+                return Loc {
+                    i: start.i,
+                    j: start.j + 1,
+                    dist: 1,
+                    next: Dir::North,
+                }
+            }
+            '7' => {
+                return Loc {
+                    i: start.i,
+                    j: start.j + 1,
+                    dist: 1,
+                    next: Dir::South,
+                }
+            }
+            '-' => {
+                return Loc {
+                    i: start.i,
+                    j: start.j + 1,
+                    dist: 1,
+                    next: Dir::East,
+                }
+            }
             _ => (),
         }
     }
 
-    output
+    panic!("Grid malformed");
 }
 
 fn create_array(p: &Path) -> Vec<Vec<char>> {
