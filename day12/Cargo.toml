@@ -9,3 +9,4 @@ nursery = "warn"
 unwrap_used = "warn"
 
 [dependencies]
+itertools = "0.13.0"
